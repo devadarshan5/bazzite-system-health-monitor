@@ -3,6 +3,13 @@
 set -u
 
 REPORT="reports/health-report.txt"
+WARN_THRESHOLD="${WARN_THRESHOLD:-80}"
+
+if ! [[ "$WARN_THRESHOLD" =~ ^(0|[1-9][0-9]?|100)$ ]]; then
+    echo "ERROR: WARN_THRESHOLD must be an integer from 0 to 100." >&2
+    exit 2
+fi
+
 mkdir -p reports
 
 {
@@ -24,11 +31,12 @@ mkdir -p reports
     df -h "$HOME"
     echo
 
-    usage=$(df -P "$HOME" | awk 'NR == 2 {gsub(/%/, "", $5); print $5}')
+    usage=$(df -P "$HOME" |
+        awk 'NR == 2 {gsub(/%/, "", $5); print $5}')
 
     echo "=== Storage Assessment ==="
     if [[ "$usage" =~ ^[0-9]+$ ]]; then
-        if (( usage >= 80 )); then
+        if (( usage >= WARN_THRESHOLD )); then
             echo "WARNING: Home filesystem usage is ${usage}%."
         else
             echo "OK: Home filesystem usage is ${usage}%."
@@ -37,7 +45,6 @@ mkdir -p reports
         echo "ERROR: Could not determine home filesystem usage."
     fi
     echo
-
 } > "$REPORT"
 
 echo "Health report saved to: $REPORT"
